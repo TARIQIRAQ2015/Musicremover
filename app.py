@@ -95,21 +95,26 @@ class MediaHandler:
                 "noplaylist": True,
                 "keepvideo": True,
                 "n_threads": 6,
+                # إضافة مسار ffmpeg
+                "ffmpeg_location": FFMPEG_PATH,
+                # إضافة خيارات إضافية لـ ffmpeg
+                "postprocessors": [{
+                    'key': 'FFmpegVideoConvertor',
+                    'preferedformat': 'mp4',
+                }],
+                # تفعيل دمج الفيديو والصوت
+                "merge_output_format": "mp4",
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 result = ydl.extract_info(url, download=True)
-
-                if "requested_formats" in result:
-                    merged_ext = result["ext"]
-                else:
-                    merged_ext = result.get("ext", "mp4")
-
-            video_file = os.path.join(UPLOADS_PATH, sanitized_title + "." + merged_ext)
-            return os.path.abspath(video_file)
+                
+                # دائماً استخدم mp4 كامتداد
+                video_file = os.path.join(UPLOADS_PATH, sanitized_title + ".mp4")
+                return os.path.abspath(video_file)
 
         except Exception as e:
-            st.error(f"خطأ في تحميل الفيديو: {e}")
+            st.error(f"خطأ في تحميل الفيديو: {str(e)}")
             return None
 
     @staticmethod
