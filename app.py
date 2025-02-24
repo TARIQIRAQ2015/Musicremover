@@ -161,57 +161,141 @@ class MediaHandler:
             return None
 
 def main():
-    st.title("Fast Music Remover")
-    st.write("قم برفع فيديو أو أدخل رابط يوتيوب لإزالة الموسيقى")
+    # تعيين نمط الصفحة
+    st.set_page_config(
+        page_title="Fast Music Remover",
+        page_icon="🎵",
+        layout="wide",
+    )
 
-    # إنشاء علامتي تبويب للاختيار بين رفع الملف أو إدخال الرابط
-    tab1, tab2 = st.tabs(["رفع ملف", "رابط يوتيوب"])
+    # إضافة CSS مخصص
+    st.markdown("""
+        <style>
+        .main {
+            background-color: #f5f5f5;
+        }
+        .stButton>button {
+            width: 100%;
+            border-radius: 10px;
+            height: 3em;
+            background-color: #FF4B4B;
+            color: white;
+            border: none;
+            margin-top: 20px;
+        }
+        .stButton>button:hover {
+            background-color: #FF2E2E;
+            border: none;
+        }
+        .upload-header {
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    with tab1:
-        uploaded_file = st.file_uploader("اختر ملف فيديو", type=['mp4', 'webm', 'avi'])
-        if uploaded_file:
-            with st.spinner('جاري رفع الملف...'):
-                sanitized_filename = Utils.sanitize_filename(uploaded_file.name)
-                video_path = os.path.join(UPLOADS_PATH, sanitized_filename)
-                with open(video_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                
-                processed_video_path = MediaHandler.process_with_media_processor(video_path)
-                if processed_video_path:
-                    st.success("تمت معالجة الفيديو بنجاح!")
-                    st.video(processed_video_path)
+    # تصميم الهيدر
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.markdown("""
+            <div class="upload-header">
+                <h1 style='text-align: center; color: #FF4B4B;'>🎵 Fast Music Remover</h1>
+                <p style='text-align: center; color: #666666;'>قم بإزالة الموسيقى من مقاطع الفيديو بسهولة</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # إنشاء التصميم الرئيسي
+    left_col, right_col = st.columns([2,1])
+
+    with left_col:
+        # إنشاء علامتي تبويب بتصميم جديد
+        tabs = st.tabs(["📤 رفع ملف", "🔗 رابط يوتيوب"])
+        
+        with tabs[0]:
+            st.markdown("### قم برفع ملف فيديو")
+            st.markdown("##### الصيغ المدعومة: MP4, WEBM, AVI")
+            uploaded_file = st.file_uploader("", type=['mp4', 'webm', 'avi'])
+            
+            if uploaded_file:
+                with st.spinner('⏳ جاري رفع الملف...'):
+                    sanitized_filename = Utils.sanitize_filename(uploaded_file.name)
+                    video_path = os.path.join(UPLOADS_PATH, sanitized_filename)
+                    with open(video_path, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
                     
-                    # إضافة زر للتحميل
-                    with open(processed_video_path, "rb") as file:
-                        st.download_button(
-                            label="تحميل الفيديو المعالج",
-                            data=file,
-                            file_name=os.path.basename(processed_video_path),
-                            mime="video/mp4"
-                        )
-
-    with tab2:
-        url = st.text_input("أدخل رابط الفيديو")
-        if url:
-            if Utils.validate_url(url):
-                with st.spinner('جاري تحميل الفيديو...'):
-                    video_path = MediaHandler.download_media(url)
-                    if video_path:
-                        processed_video_path = MediaHandler.process_with_media_processor(video_path)
-                        if processed_video_path:
-                            st.success("تمت معالجة الفيديو بنجاح!")
-                            st.video(processed_video_path)
+                    # إضافة شريط تقدم
+                    progress_bar = st.progress(0)
+                    for i in range(100):
+                        progress_bar.progress(i + 1)
+                    
+                    processed_video_path = MediaHandler.process_with_media_processor(video_path)
+                    if processed_video_path:
+                        st.success("✅ تمت معالجة الفيديو بنجاح!")
+                        
+                        # إضافة زر للتحميل بتصميم جديد
+                        with open(processed_video_path, "rb") as file:
+                            st.download_button(
+                                label="⬇️ تحميل الفيديو المعالج",
+                                data=file,
+                                file_name=os.path.basename(processed_video_path),
+                                mime="video/mp4"
+                            )
+        
+        with tabs[1]:
+            st.markdown("### أدخل رابط فيديو يوتيوب")
+            url = st.text_input("", placeholder="https://www.youtube.com/watch?v=...")
+            
+            if url:
+                if Utils.validate_url(url):
+                    with st.spinner('⏳ جاري تحميل الفيديو...'):
+                        # إضافة شريط تقدم
+                        progress_bar = st.progress(0)
+                        video_path = MediaHandler.download_media(url)
+                        
+                        if video_path:
+                            for i in range(100):
+                                progress_bar.progress(i + 1)
                             
-                            # إضافة زر للتحميل
-                            with open(processed_video_path, "rb") as file:
-                                st.download_button(
-                                    label="تحميل الفيديو المعالج",
-                                    data=file,
-                                    file_name=os.path.basename(processed_video_path),
-                                    mime="video/mp4"
-                                )
-            else:
-                st.error("الرابط غير صالح")
+                            processed_video_path = MediaHandler.process_with_media_processor(video_path)
+                            if processed_video_path:
+                                st.success("✅ تمت معالجة الفيديو بنجاح!")
+                                
+                                # إضافة زر للتحميل
+                                with open(processed_video_path, "rb") as file:
+                                    st.download_button(
+                                        label="⬇️ تحميل الفيديو المعالج",
+                                        data=file,
+                                        file_name=os.path.basename(processed_video_path),
+                                        mime="video/mp4"
+                                    )
+                else:
+                    st.error("❌ الرابط غير صالح")
+
+    with right_col:
+        # عرض الفيديو المعالج
+        if 'processed_video_path' in locals():
+            st.markdown("### معاينة الفيديو")
+            st.video(processed_video_path)
+            
+            # إضافة معلومات إضافية
+            st.markdown("### تفاصيل المعالجة")
+            with st.expander("إحصائيات الملف"):
+                file_size = os.path.getsize(processed_video_path) / (1024 * 1024)  # تحويل إلى ميجابايت
+                st.write(f"📁 حجم الملف: {file_size:.2f} MB")
+                st.write(f"📝 اسم الملف: {os.path.basename(processed_video_path)}")
+                media_type = MediaHandler.detect_media_type(processed_video_path)
+                st.write(f"📺 نوع الملف: {media_type}")
+
+    # إضافة فوتر
+    st.markdown("""
+        <div style='text-align: center; color: #666666; padding: 20px;'>
+            <p>تم التطوير بواسطة Fast Music Remover Team</p>
+        </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
