@@ -1,3 +1,12 @@
+import streamlit as st
+
+# يجب أن يكون هذا أول استدعاء لـ streamlit
+st.set_page_config(
+    page_title="Fast Music Remover",
+    page_icon="🎵",
+    layout="wide",
+)
+
 import json
 import logging
 import os
@@ -6,7 +15,6 @@ import subprocess
 from urllib.parse import urlparse
 
 import yt_dlp
-import streamlit as st
 
 """
 هذا هو تطبيق Fast Music Remover المبني على Streamlit.
@@ -161,13 +169,6 @@ class MediaHandler:
             return None
 
 def main():
-    # تعيين نمط الصفحة
-    st.set_page_config(
-        page_title="Fast Music Remover",
-        page_icon="🎵",
-        layout="wide",
-    )
-
     # إضافة CSS مخصص
     st.markdown("""
         <style>
