@@ -90,28 +90,33 @@ class MediaHandler:
                 sanitized_title = Utils.sanitize_filename(base_title)
 
             ydl_opts = {
-                "format": "bestvideo+bestaudio/best",
+                # تغيير صيغة التحميل لتجنب الحاجة للدمج
+                "format": "best[ext=mp4]/best",  # تحميل أفضل جودة متوفرة بصيغة MP4
                 "outtmpl": os.path.join(UPLOADS_PATH, sanitized_title + ".%(ext)s"),
                 "noplaylist": True,
                 "keepvideo": True,
-                "n_threads": 6,
-                # إضافة مسار ffmpeg
+                "prefer_ffmpeg": True,
                 "ffmpeg_location": FFMPEG_PATH,
-                # إضافة خيارات إضافية لـ ffmpeg
-                "postprocessors": [{
-                    'key': 'FFmpegVideoConvertor',
-                    'preferedformat': 'mp4',
-                }],
-                # تفعيل دمج الفيديو والصوت
-                "merge_output_format": "mp4",
             }
 
+            # التحقق من وجود ffmpeg قبل التحميل
+            if not os.path.exists(FFMPEG_PATH):
+                st.error(f"لم يتم العثور على ffmpeg في المسار: {FFMPEG_PATH}")
+                return None
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                result = ydl.extract_info(url, download=True)
-                
-                # دائماً استخدم mp4 كامتداد
-                video_file = os.path.join(UPLOADS_PATH, sanitized_title + ".mp4")
-                return os.path.abspath(video_file)
+                try:
+                    result = ydl.extract_info(url, download=True)
+                    # استخدام المسار المباشر من النتيجة
+                    video_file = ydl.prepare_filename(result)
+                    return os.path.abspath(video_file)
+                except Exception as download_error:
+                    st.error(f"خطأ أثناء التحميل: {str(download_error)}")
+                    # محاولة بديلة باستخدام صيغة أبسط
+                    ydl_opts["format"] = "best"
+                    result = ydl.extract_info(url, download=True)
+                    video_file = ydl.prepare_filename(result)
+                    return os.path.abspath(video_file)
 
         except Exception as e:
             st.error(f"خطأ في تحميل الفيديو: {str(e)}")
