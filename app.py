@@ -41,9 +41,58 @@ DOWNLOADS_PATH = os.path.abspath(config["downloads_path"])
 UPLOADS_PATH = os.path.abspath(config.get("uploads_path", os.path.join(BASE_DIR, "uploads")))
 
 DEEPFILTERNET_PATH = os.path.abspath(config["deep_filter_path"])
-FFMPEG_PATH = os.path.abspath(config["ffmpeg_path"])
 
 os.environ["DEEPFILTERNET_PATH"] = DEEPFILTERNET_PATH
+
+# تحديد مسار ffmpeg بشكل ديناميكي
+def get_ffmpeg_path():
+    """تحديد مسار ffmpeg بشكل ديناميكي"""
+    # محاولة العثور على ffmpeg في مسارات النظام
+    try:
+        result = subprocess.run(['which', 'ffmpeg'], capture_output=True, text=True)
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except:
+        pass
+    
+    # المسارات المحتملة لـ ffmpeg
+    possible_paths = [
+        '/usr/bin/ffmpeg',
+        '/usr/local/bin/ffmpeg',
+        '/opt/homebrew/bin/ffmpeg',  # لنظام macOS
+        'C:\\ffmpeg\\bin\\ffmpeg.exe',  # لنظام Windows
+        os.path.join(BASE_DIR, 'ffmpeg')  # في مجلد المشروع
+    ]
+    
+    # البحث في المسارات المحتملة
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+            
+    return None
+
+# تعديل تعريف FFMPEG_PATH
+FFMPEG_PATH = get_ffmpeg_path()
+if not FFMPEG_PATH:
+    st.error("""
+    لم يتم العثور على ffmpeg! 
+    الرجاء تثبيت ffmpeg على نظامك:
+    
+    على Ubuntu/Debian:
+    ```
+    sudo apt-get update
+    sudo apt-get install ffmpeg
+    ```
+    
+    على macOS:
+    ```
+    brew install ffmpeg
+    ```
+    
+    على Windows:
+    قم بتحميل ffmpeg من الموقع الرسمي وأضفه إلى متغيرات النظام PATH
+    """)
+    st.stop()
 
 class Utils:
     """فئة المساعدة للعمليات الشائعة مثل تنظيف الملفات وتنظيمها."""
@@ -90,24 +139,20 @@ class MediaHandler:
                 sanitized_title = Utils.sanitize_filename(base_title)
 
             ydl_opts = {
-                # تغيير صيغة التحميل لتجنب الحاجة للدمج
-                "format": "best[ext=mp4]/best",  # تحميل أفضل جودة متوفرة بصيغة MP4
+                "format": "best[ext=mp4]/best",
                 "outtmpl": os.path.join(UPLOADS_PATH, sanitized_title + ".%(ext)s"),
                 "noplaylist": True,
                 "keepvideo": True,
                 "prefer_ffmpeg": True,
-                "ffmpeg_location": FFMPEG_PATH,
             }
 
-            # التحقق من وجود ffmpeg قبل التحميل
-            if not os.path.exists(FFMPEG_PATH):
-                st.error(f"لم يتم العثور على ffmpeg في المسار: {FFMPEG_PATH}")
-                return None
+            # إضافة مسار ffmpeg فقط إذا تم العثور عليه
+            if FFMPEG_PATH:
+                ydl_opts["ffmpeg_location"] = FFMPEG_PATH
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 try:
                     result = ydl.extract_info(url, download=True)
-                    # استخدام المسار المباشر من النتيجة
                     video_file = ydl.prepare_filename(result)
                     return os.path.abspath(video_file)
                 except Exception as download_error:
